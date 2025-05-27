@@ -1,0 +1,52 @@
+name: Windows EXE Build
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
+
+      - name: Build backend
+        run: |
+          cd backend
+          ./mvnw clean package -DskipTests
+
+      - name: Copy build outputs to Electron
+        run: |
+          mkdir -p electron/frontend
+          cp -r frontend/build electron/frontend/
+          mkdir -p electron/backend/target
+          cp backend/target/*.jar electron/backend/target/
+
+      - name: Install Electron dependencies
+        run: |
+          cd electron
+          npm install
+
+      - name: Build Windows .exe
+        run: |
+          cd electron
+          npm run dist
+
+      - name: Upload Windows Installer (Local Copy)
+        uses: ./.github/actions/upload-artifact
+        with:
+          name: tikur-anbessa-windows-installer
+          path: electron/dist/*.exe
